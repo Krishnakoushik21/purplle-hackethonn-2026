@@ -187,6 +187,7 @@ See `DESIGN.md` and `CHOICES.md` for architecture, trade-offs, and AI-assisted
 decisions.
 
 ## Submission Artifacts
+<img width="1600" height="1572" alt="image" src="https://github.com/user-attachments/assets/f17f2a1a-0ca1-4e91-aebf-27a05388afa9" />
 
 - Architecture image: `artifacts/architecture.svg`
 - Sample generated events: `artifacts/sample_events.jsonl`
