@@ -193,6 +193,4 @@ decisions.
 - Sample API responses: `artifacts/sample_api_responses.json`
 - Dashboard screenshot: `artifacts/dashboard-screenshot.png`
 - Final upload checklist: `SUBMISSION_CHECKLIST.md`
-- Demo recording script: `DEMO_VIDEO_SCRIPT.md`
-- Demo video: upload a 2-3 minute recording to YouTube or Drive, then add the
-  link here before submission.
+  
