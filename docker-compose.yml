@@ -1,0 +1,62 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: purplle-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: purplle-api
+    environment:
+      EVENT_DB_PATH: /data/store-intelligence.db
+      POS_CSV: /input/pos_transactions.csv
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    volumes:
+      - event_data:/data
+      - ./local-data:/input:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Optional live demo. Run with:
+  # docker compose --profile demo up --build
+  detector-demo:
+    profiles: ["demo"]
+    build:
+      context: .
+      dockerfile: Dockerfile.detector
+    container_name: purplle-detector-demo
+    command: python services/detector/pipeline.py --demo --demo-duration 3600 --redis-url redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dashboard:
+    image: nginx:alpine
+    container_name: purplle-dashboard
+    ports:
+      - "3000:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+
+volumes:
+  event_data:
+  redis_data:

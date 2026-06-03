@@ -1,0 +1,32 @@
+{
+  "stores": [
+    {
+      "store_id": "ST1008",
+      "open_hours": {
+        "timezone": "Asia/Kolkata",
+        "open": "10:00",
+        "close": "21:00"
+      },
+      "cameras": [
+        {
+          "camera_id": "CAM3",
+          "role": "entry",
+          "entry_threshold": {
+            "axis": "y",
+            "position": 0.3,
+            "inbound_direction": "increasing"
+          },
+          "zones": [
+            {
+              "zone_id": "Z_ENTRANCE",
+              "zone_name": "Entrance Threshold",
+              "zone_type": "ENTRY",
+              "is_revenue_zone": false,
+              "polygon": [[0.08, 0.0], [0.68, 0.0], [0.68, 0.72], [0.08, 0.72]]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

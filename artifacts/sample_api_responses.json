@@ -1,0 +1,94 @@
+{
+  "POST /events/ingest": {
+    "accepted_count": 9,
+    "duplicate_count": 0,
+    "rejected_count": 0,
+    "errors": []
+  },
+  "GET /stores/ST1008/metrics": {
+    "store_id": "ST1008",
+    "window_date": "2026-04-10",
+    "unique_visitors": 2,
+    "conversion_rate": 50.0,
+    "converted_visitors": 1,
+    "avg_dwell_per_zone_ms": {
+      "Z_CAM1_DISPLAY": 15000.0,
+      "Z_CAM2_WALL_SHELF": 45000.0
+    },
+    "queue_depth": 5,
+    "abandonment_rate": 0.0,
+    "last_event_timestamp": "2026-04-10T14:44:00Z"
+  },
+  "GET /stores/ST1008/funnel": {
+    "store_id": "ST1008",
+    "unit": "visitor_session",
+    "stages": [
+      {
+        "stage": "ENTRY",
+        "count": 2,
+        "drop_off_pct": 0.0
+      },
+      {
+        "stage": "ZONE_VISIT",
+        "count": 2,
+        "drop_off_pct": 0.0
+      },
+      {
+        "stage": "BILLING_QUEUE",
+        "count": 1,
+        "drop_off_pct": 50.0
+      },
+      {
+        "stage": "PURCHASE",
+        "count": 1,
+        "drop_off_pct": 0.0
+      }
+    ]
+  },
+  "GET /stores/ST1008/heatmap": {
+    "store_id": "ST1008",
+    "session_count": 2,
+    "data_confidence": "LOW",
+    "zones": [
+      {
+        "zone_id": "Z_CAM1_DISPLAY",
+        "visit_frequency": 1,
+        "avg_dwell_ms": 15000.0,
+        "normalized_score": 100.0
+      },
+      {
+        "zone_id": "Z_CAM2_WALL_SHELF",
+        "visit_frequency": 1,
+        "avg_dwell_ms": 45000.0,
+        "normalized_score": 100.0
+      }
+    ]
+  },
+  "GET /stores/ST1008/anomalies": {
+    "store_id": "ST1008",
+    "anomalies": [
+      {
+        "type": "BILLING_QUEUE_SPIKE",
+        "severity": "WARN",
+        "detected_at": "2026-04-10T14:44:00Z",
+        "suggested_action": "Open an additional billing counter and redirect available staff.",
+        "details": {
+          "queue_depth": 5,
+          "threshold": 4
+        }
+      }
+    ]
+  },
+  "GET /health": {
+    "status": "DEGRADED",
+    "database": "OK",
+    "stores": {
+      "ST1008": {
+        "last_event_timestamp": "2026-04-10T14:44:00Z",
+        "feed_status": "STALE_FEED",
+        "lag_minutes": 77315.14
+      }
+    },
+    "timestamp": "2026-06-03T07:19:08.478793Z"
+  }
+}

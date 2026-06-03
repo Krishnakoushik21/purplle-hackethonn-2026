@@ -1,0 +1,12 @@
+[
+  {
+    "camera_id": "CAM3",
+    "source": "local-data/videos/CAM 3.mp4",
+    "clip_start": "2026-04-10T20:09:45+05:30"
+  },
+  {
+    "camera_id": "CAM5",
+    "source": "local-data/videos/CAM 5.mp4",
+    "clip_start": "2026-04-10T20:09:47+05:30"
+  }
+]

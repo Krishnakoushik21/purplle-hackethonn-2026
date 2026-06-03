@@ -1,0 +1,29 @@
+# Challenge data must not be committed.
+local-data/
+data/videos/
+*.mp4
+*.avi
+*.mov
+*.zip
+*.tar.gz
+
+# Generated event and model artifacts.
+*.jsonl
+*.db
+*.db-shm
+*.db-wal
+*.pt
+runs/
+!artifacts/sample_events.jsonl
+
+# Python and test artifacts.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+
+# Editor and OS files.
+.DS_Store
+Thumbs.db

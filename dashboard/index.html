@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Purplle Store Intelligence — Brigade Road</title>
+<script src="vendor/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d0f1a;
+    --card: #151828;
+    --border: #232640;
+    --accent: #7c5cfc;
+    --accent2: #fc5c7d;
+    --green: #22d3a0;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --text: #e2e8f0;
+    --muted: #7c8db0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px; border-bottom: 1px solid var(--border);
+    background: rgba(21,24,40,0.9); backdrop-filter: blur(8px);
+    position: sticky; top: 0; z-index: 100;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.02em; }
+  header h1 span { color: var(--accent); }
+  .status { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+  .dot.dead { background: var(--red); animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  main { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+
+  /* Top KPI row */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content:''; position: absolute; top:0; left:0; right:0; height:3px;
+    background: var(--accent);
+  }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.red::before { background: var(--red); }
+  .kpi-card.yellow::before { background: var(--yellow); }
+  .kpi-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 8px; }
+  .kpi-value { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+  .kpi-sub { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+
+  /* Main grid */
+  .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+  }
+  .card-title { font-size: 0.85rem; font-weight: 600; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 16px; }
+
+  /* Zone bars */
+  .zone-bar-wrap { display: flex; flex-direction: column; gap: 10px; }
+  .zone-row { display: flex; align-items: center; gap: 10px; }
+  .zone-name { font-size: 0.78rem; min-width: 130px; color: var(--text); }
+  .bar-bg { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.5s ease; }
+  .zone-count { font-size: 0.78rem; min-width: 28px; text-align: right; color: var(--text); font-weight: 600; }
+  .zone-dwell { font-size: 0.7rem; color: var(--muted); min-width: 60px; text-align: right; }
+
+  /* Anomalies */
+  .anomaly-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+  .anomaly-item {
+    padding: 10px 12px; border-radius: 8px; font-size: 0.78rem;
+    border-left: 3px solid var(--yellow);
+    background: rgba(251,191,36,0.07);
+  }
+  .anomaly-item.queue { border-color: var(--red); background: rgba(248,113,113,0.07); }
+  .anomaly-item.dwell_alert { border-color: var(--yellow); }
+  .anomaly-type { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.05em; }
+  .anomaly-detail { color: var(--muted); margin-top: 3px; }
+
+  /* Charts row */
+  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .chart-wrap { position: relative; height: 220px; }
+
+  /* Camera feed grid */
+  .cam-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; margin-bottom: 20px; }
+  .cam-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; text-align: center;
+  }
+  .cam-preview {
+    width: 100%; aspect-ratio: 4/3; border-radius: 6px; background: #1a1d2e;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: var(--muted); position: relative; overflow: hidden;
+  }
+  .cam-icon { font-size: 1.4rem; margin-bottom: 4px; }
+  .cam-label { font-size: 0.72rem; font-weight: 600; margin-top: 6px; color: var(--muted); }
+  .cam-count {
+    position: absolute; top: 6px; right: 6px; background: var(--accent);
+    color: white; font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 10px;
+  }
+  .cam-count.alert { background: var(--red); }
+
+  /* Heatmap */
+  .heatmap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .heat-cell {
+    border-radius: 8px; padding: 12px 10px; text-align: center; font-size: 0.72rem; font-weight: 600;
+    transition: background 0.5s ease;
+  }
+  .heat-cell .heat-name { font-size: 0.65rem; color: rgba(255,255,255,0.7); margin-top: 4px; }
+
+  /* Events table */
+  .events-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+  .events-table th { color: var(--muted); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .events-table td { padding: 6px 8px; border-bottom: 1px solid rgba(35,38,64,0.5); vertical-align: middle; }
+  .events-table tr:hover td { background: rgba(124,92,252,0.05); }
+  .badge {
+    display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 0.65rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .badge-enter { background: rgba(34,211,160,0.15); color: var(--green); }
+  .badge-exit { background: rgba(248,113,113,0.15); color: var(--red); }
+  .badge-zone { background: rgba(124,92,252,0.15); color: var(--accent); }
+  .badge-alert { background: rgba(251,191,36,0.15); color: var(--yellow); }
+  .badge-queue { background: rgba(248,113,113,0.2); color: var(--red); }
+
+  .ts { color: var(--muted); }
+  footer { text-align: center; padding: 20px; color: var(--muted); font-size: 0.72rem; }
+
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .chart-grid { grid-template-columns: 1fr; }
+    .cam-grid { grid-template-columns: repeat(3,1fr); }
+    .heatmap-grid { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛍 Purplle <span>Store Intelligence</span> &mdash; Brigade Road</h1>
+  <div class="status">
+    <div class="dot" id="ws-dot"></div>
+    <span id="ws-label">Connecting…</span>
+    <span style="margin-left:16px;font-size:0.7rem;" id="last-ts"></span>
+  </div>
+</header>
+
+<main>
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="kpi-label">In-Store Now</div>
+      <div class="kpi-value" id="kpi-in-store">—</div>
+      <div class="kpi-sub">Live headcount</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Footfall</div>
+      <div class="kpi-value" id="kpi-footfall">—</div>
+      <div class="kpi-sub">Cumulative today</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Conversion Rate</div>
+      <div class="kpi-value" id="kpi-conversion">—</div>
+      <div class="kpi-sub">Footfall → Purchase</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Peak Zone</div>
+      <div class="kpi-value" style="font-size:1.2rem;margin-top:6px;" id="kpi-peak-zone">—</div>
+      <div class="kpi-sub">Highest occupancy</div>
+    </div>
+    <div class="kpi-card red" id="anomaly-card">
+      <div class="kpi-label">Active Alerts</div>
+      <div class="kpi-value" id="kpi-alerts">0</div>
+      <div class="kpi-sub">Anomalies</div>
+    </div>
+  </div>
+
+  <!-- Camera Feed Status -->
+  <div class="cam-grid" id="cam-grid">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- Main content -->
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-title">Zone Occupancy &amp; Dwell Time</div>
+      <div class="zone-bar-wrap" id="zone-bars">
+        <div style="color:var(--muted);font-size:0.8rem;">Waiting for data…</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Anomaly Feed</div>
+      <div class="anomaly-list" id="anomaly-list">
+        <div style="color:var(--muted);font-size:0.78rem;">No anomalies yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="card">
+      <div class="card-title">Hourly Footfall</div>
+      <div class="chart-wrap"><canvas id="chart-hourly"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Department Footfall Distribution</div>
+      <div class="chart-wrap"><canvas id="chart-dept"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Heatmap -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Zone Heat Map (% Total Dwell)</div>
+    <div class="heatmap-grid" id="heatmap-grid">
+      <div style="color:var(--muted);font-size:0.8rem;">Waiting for data…</div>
+    </div>
+  </div>
+
+  <!-- Live events -->
+  <div class="card">
+    <div class="card-title">Live Event Stream (last 30)</div>
+    <div style="overflow-x:auto;">
+      <table class="events-table">
+        <thead>
+          <tr>
+        <th>Time</th><th>Camera</th><th>Event</th><th>Visitor ID</th><th>Zone</th><th>Detail</th>
+          </tr>
+        </thead>
+        <tbody id="events-tbody">
+          <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">No events yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<footer>Purplle Tech Challenge 2026 &mdash; Store Intelligence System &mdash; ST1008 Brigade Road</footer>
+
+<script>
+// Keep the operational dashboard usable when the optional Chart.js CDN is
+// unavailable. Metric cards, heatmap, alerts, and the event stream still work.
+if (typeof Chart === 'undefined') {
+  window.Chart = class {
+    constructor(canvas, config) {
+      this.data = config.data;
+      this.options = config.options;
+      if (canvas?.parentElement) {
+        canvas.parentElement.innerHTML =
+          '<div style="color:var(--muted);font-size:0.78rem;padding:20px;">Chart unavailable offline</div>';
+      }
+    }
+    update() {}
+  };
+}
+
+// Config
+const API_BASE = window.location.protocol === 'file:' ? 'http://127.0.0.1:8000' : window.location.origin;
+const WS_URL = API_BASE.replace('http','ws') + '/ws/live';
+
+// Cam metadata
+const CAMS = [
+  {id:'CAM1', label:'CAM 1', desc:'Sales Floor Display'},
+  {id:'CAM2', label:'CAM 2', desc:'Cosmetics Wall'},
+  {id:'CAM3', label:'CAM 3', desc:'Entrance / Exit'},
+  {id:'CAM4', label:'CAM 4', desc:'Backroom / Staff'},
+  {id:'CAM5', label:'CAM 5', desc:'Billing Counter'},
+];
+
+// Zone pretty names
+const ZONE_NAMES = {
+  Z_CAM1_WALL_SHELF:'CAM1 Wall Shelf', Z_CAM1_DISPLAY:'CAM1 Center Display',
+  Z_CAM2_WALL_SHELF:'CAM2 Cosmetics Wall', Z_CAM2_DISPLAY:'CAM2 Center Display',
+  Z_ENTRANCE:'Entrance Threshold', Z_BACKROOM:'Backroom',
+  Z_BILLING:'Billing Counter Queue',
+};
+
+// State
+let state = {};
+let eventHistory = [];
+let hourlyChart, deptChart;
+
+// --- Build static cam grid ---
+function buildCamGrid() {
+  const grid = document.getElementById('cam-grid');
+  grid.innerHTML = CAMS.map(cam => `
+    <div class="cam-card" id="cam-${cam.id}">
+      <div class="cam-preview">
+        <div class="cam-icon">📹</div>
+        <div>${cam.desc}</div>
+        <div class="cam-count" id="cnt-${cam.id}">—</div>
+      </div>
+      <div class="cam-label">${cam.label}</div>
+    </div>
+  `).join('');
+}
+
+// --- Charts ---
+function initCharts() {
+  const defaults = { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color:'#7c8db0', font:{size:11} } } } };
+
+  hourlyChart = new Chart(document.getElementById('chart-hourly'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{
+      label:'Footfall', data:[],
+      backgroundColor:'rgba(124,92,252,0.6)', borderColor:'#7c5cfc',
+      borderWidth:1, borderRadius:4,
+    }]},
+    options: { ...defaults, scales: {
+      x: { ticks:{color:'#7c8db0'}, grid:{color:'#232640'} },
+      y: { ticks:{color:'#7c8db0'}, grid:{color:'#232640'}, beginAtZero:true },
+    }},
+  });
+
+  deptChart = new Chart(document.getElementById('chart-dept'), {
+    type: 'doughnut',
+    data: { labels: [], datasets: [{
+      data:[], backgroundColor:[
+        '#7c5cfc','#fc5c7d','#22d3a0','#fbbf24','#60a5fa','#f472b6'
+      ], borderWidth:0,
+    }]},
+    options: { ...defaults },
+  });
+}
+
+function updateCharts(kpi) {
+  // Hourly
+  const hourly = kpi.hourly_footfall || {};
+  const hours = Array.from({length:24}, (_,i) => i);
+  hourlyChart.data.labels = hours.map(h => `${h}:00`);
+  hourlyChart.data.datasets[0].data = hours.map(h => hourly[h] || hourly[String(h)] || 0);
+  hourlyChart.update('none');
+
+  // Dept
+  const dept = kpi.dept_footfall || {};
+  const deptKeys = Object.keys(dept);
+  deptChart.data.labels = deptKeys.map(d => d.charAt(0).toUpperCase()+d.slice(1));
+  deptChart.data.datasets[0].data = deptKeys.map(k => dept[k]);
+  deptChart.update('none');
+}
+
+// --- Zone bars ---
+function updateZoneBars(kpi) {
+  const occupancy = kpi.zone_occupancy || {};
+  const dwell = kpi.avg_dwell_by_zone || {};
+  const entries = Object.entries(occupancy).sort((a,b)=>b[1]-a[1]);
+  if (!entries.length) return;
+
+  const maxOcc = Math.max(...entries.map(e=>e[1]),1);
+  const html = entries.map(([zid, count]) => `
+    <div class="zone-row">
+      <span class="zone-name">${ZONE_NAMES[zid]||zid}</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${count/maxOcc*100}%"></div></div>
+      <span class="zone-count">${count}</span>
+      <span class="zone-dwell">${dwell[zid]? fmtDwell(dwell[zid]) : '—'}</span>
+    </div>
+  `).join('');
+  document.getElementById('zone-bars').innerHTML = html;
+}
+
+// --- Heatmap ---
+function updateHeatmap(kpi) {
+  const hm = kpi.heatmap || {};
+  const entries = Object.entries(hm).sort((a,b)=>b[1]-a[1]);
+  if (!entries.length) return;
+  const grid = document.getElementById('heatmap-grid');
+  grid.innerHTML = entries.map(([zid, pct]) => {
+    const intensity = Math.min(255, Math.round(pct * 2.55));
+    const bg = `rgba(124,92,252,${pct/100 + 0.05})`;
+    const heat = pct > 30 ? 'var(--accent2)' : pct > 15 ? 'var(--accent)' : 'var(--green)';
+    return `
+      <div class="heat-cell" style="background:${bg};border:1px solid rgba(255,255,255,0.05)">
+        <div style="color:${heat};font-size:1rem;font-weight:800">${pct.toFixed(1)}%</div>
+        <div class="heat-name">${ZONE_NAMES[zid]||zid}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// --- Anomalies ---
+function updateAnomalies(anomalies) {
+  const list = document.getElementById('anomaly-list');
+  if (!anomalies || !anomalies.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:0.78rem;">No anomalies detected</div>';
+    return;
+  }
+  list.innerHTML = [...anomalies].reverse().map(a => `
+    <div class="anomaly-item ${a.type}">
+      <div class="anomaly-type">${a.type.replace(/_/g,' ')}</div>
+      <div class="anomaly-detail">
+        ${a.details?.zone_id ? `Zone: <b>${a.details.zone_id}</b> ` : ''}
+        ${a.details?.queue_depth ? `Queue: <b>${a.details.queue_depth} people</b> ` : ''}
+        ${a.suggested_action || ''}
+        <span style="float:right;font-size:0.65rem;color:var(--muted)">${fmtTime(a.detected_at)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// --- Camera counts ---
+function updateCamCounts(kpi) {
+  // Approximate: distribute in-store count across cameras based on zone mapping
+  const occ = kpi.zone_occupancy || {};
+  const camZones = {
+    CAM1:['Z_CAM1_WALL_SHELF','Z_CAM1_DISPLAY'],
+    CAM2:['Z_CAM2_WALL_SHELF','Z_CAM2_DISPLAY'],
+    CAM3:['Z_ENTRANCE'],
+    CAM4:['Z_BACKROOM'],
+    CAM5:['Z_BILLING'],
+  };
+  for (const [cam, zones] of Object.entries(camZones)) {
+    const cnt = zones.reduce((s,z)=>s+(occ[z]||0),0);
+    const el = document.getElementById(`cnt-${cam}`);
+    if (el) {
+      el.textContent = cnt;
+      el.className = 'cam-count' + (cam==='CAM5' && cnt>=4 ? ' alert' : '');
+    }
+  }
+}
+
+// --- Live events feed ---
+function addEvent(event) {
+  if (event.type === 'ping') return;
+  eventHistory.unshift(event);
+  if (eventHistory.length > 30) eventHistory.pop();
+  renderEvents();
+}
+
+function renderEvents() {
+  const tbody = document.getElementById('events-tbody');
+  if (!eventHistory.length) return;
+  tbody.innerHTML = eventHistory.map(e => {
+    const etype = e.event_type || '';
+    let badgeClass = 'badge-zone';
+    if (etype === 'ENTRY' || etype === 'REENTRY') badgeClass = 'badge-enter';
+    else if (etype === 'EXIT') badgeClass = 'badge-exit';
+    else if (etype.includes('QUEUE')) badgeClass = 'badge-queue';
+    return `
+      <tr>
+        <td class="ts">${fmtTime(e.timestamp)}</td>
+        <td>${e.camera_id||'—'}</td>
+        <td><span class="badge ${badgeClass}">${etype.replace(/_/g,' ')}</span></td>
+        <td>${e.visitor_id||'—'}</td>
+        <td>${ZONE_NAMES[e.zone_id]||e.zone_id||'—'}</td>
+        <td style="color:var(--muted)">
+          ${e.dwell_ms ? 'Dwell: '+fmtDwell(Number(e.dwell_ms)/1000) : ''}
+          ${e.metadata?.queue_depth ? 'Queue: '+e.metadata.queue_depth : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// --- Utils ---
+function fmtDwell(s) {
+  if (s < 60) return Math.round(s)+'s';
+  return Math.floor(s/60)+'m '+Math.round(s%60)+'s';
+}
+function fmtTime(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleTimeString(); } catch { return iso; }
+}
+
+// --- KPI update ---
+function applyKPI(kpi) {
+  state = kpi;
+  document.getElementById('kpi-in-store').textContent = kpi.total_in_store ?? '—';
+  document.getElementById('kpi-footfall').textContent = kpi.cumulative_footfall ?? '—';
+  document.getElementById('kpi-peak-zone').textContent =
+    ZONE_NAMES[kpi.peak_zone] || kpi.peak_zone || '—';
+  const alerts = (kpi.recent_anomalies||[]).length;
+  document.getElementById('kpi-alerts').textContent = alerts;
+
+  document.getElementById('last-ts').textContent =
+    kpi.timestamp ? 'Updated ' + fmtTime(kpi.timestamp) : '';
+
+  updateZoneBars(kpi);
+  updateHeatmap(kpi);
+  updateAnomalies(kpi.recent_anomalies);
+  updateCamCounts(kpi);
+  updateCharts(kpi);
+
+  // Add as event for the feed
+  if (kpi.event_type) addEvent(kpi);
+}
+
+// --- Fetch conversion rate separately ---
+async function fetchConversion() {
+  try {
+    const r = await fetch(`${API_BASE}/api/v1/pos/conversion`);
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('kpi-conversion').textContent =
+      (d.conversion_rate_pct ?? '—') + '%';
+  } catch {}
+}
+
+// --- WebSocket ---
+function connect() {
+  const dot = document.getElementById('ws-dot');
+  const label = document.getElementById('ws-label');
+
+  const ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    dot.className = 'dot';
+    label.textContent = 'Live';
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === 'ping') return;
+      applyKPI(data);
+      // Also show in event feed if it has event_type
+      if (data.event_type) addEvent(data);
+    } catch {}
+  };
+
+  ws.onclose = () => {
+    dot.className = 'dot dead';
+    label.textContent = 'Reconnecting…';
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+// --- Poll recent events for the table ---
+async function pollEvents() {
+  try {
+    const r = await fetch(`${API_BASE}/api/v1/events/recent?limit=30`);
+    if (!r.ok) return;
+    const d = await r.json();
+    eventHistory = d.events || [];
+    renderEvents();
+  } catch {}
+}
+
+// --- Poll KPI (fallback if WS not available) ---
+async function pollKPI() {
+  try {
+    const r = await fetch(`${API_BASE}/api/v1/kpi/summary`);
+    if (!r.ok) return;
+    const d = await r.json();
+    applyKPI(d);
+  } catch {}
+}
+
+// --- Init ---
+buildCamGrid();
+initCharts();
+connect();
+fetchConversion();
+pollEvents();
+
+// Fallback polling every 5s
+setInterval(pollKPI, 5000);
+setInterval(pollEvents, 8000);
+setInterval(fetchConversion, 30000);
+</script>
+</body>
+</html>
